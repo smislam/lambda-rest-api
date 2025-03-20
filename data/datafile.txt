@@ -1,0 +1,10 @@
+[
+    {"isbn":12345,"name":"Alice In Wonderland","author":"Doug Adams"},
+    {"isbn":11111,"name":"This is Us","author":"Mary Abharam"},
+    {"isbn":22222,"name":"No Place like home","author":"Sidney Poitere"},
+    {"isbn":33333,"name":"Ocean is blue","author":"Amy Wisewoman"},
+    {"isbn":44444,"name":"Dont cry silently","author":"Sister Rosenthal"},
+    {"isbn":55555,"name":"Operation Nowhere","author":"Major Gregory Surgent"},
+    {"isbn":66666,"name":"Evaluate your situation","author":"Mark Smith"},
+    {"isbn":77777,"name":"Leaders like you","author":"Daniel Steppleton"}
+]
