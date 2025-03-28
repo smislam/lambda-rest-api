@@ -14,16 +14,32 @@ This application is developed using AWS CDK in TypeScript.
 * Creates a Lambda that will process the S3 data and load to AWS DynamoDB.  Duplicated data will update existing records.
 * Creates a DynamoDB table for data persistance
 * Creates a Lambda that hostes multiple REST APIs: Single and Bulk
-* Creates an Application Load balancer to expose the Lambda which returns the REST API responses in JSON payload
+* Configures REST API to use JWT
+* Creates an Application Load balancer (with SSL Certificate) to expose the Lambda which returns the REST API responses in JSON payload
 
 ## Steps to run and test
+* Procure and add the appropriate certificate to AWS ACM, so that we can configure TLS.
+* Store Certificate metadata to Secrets Manager so that we can use that for configuring the Application Load Balancer.
+* Configure your Identity Provider.  We used Auth0.
+* Once the Identity provider is created, add the infromation to SSM and Secrets Manager (Client-Secret), so that we can configure the REST API Lambda to validate JWT.
 * Deploy the CDK code. Wait for the deployment to finish.  It will print out the API endpoint for you to use.  For demonstration purpose, we also share a data file that will be uploaded to S3.
-* Invoke the REST APIs
+* Update your IDP configurations callback configurations to use the API endpoints you have.
+* Get the Access token from your Identity Provider
+  * ![image](get-access-token.PNG "Example of fetching access token from Auth0")
+* Invoke the REST APIs using the Access token
   * ![image](result.PNG "Example of a Single REST API Response")
   * ![image](batchResult.PNG "Example of a Batch REST API Response")
+
+## Considerations
+* We are using Self-signed Certificate.  Please use a Certificate Provider like Amazon Certificate Manager.
+* AWS ALB doesn't support client_credentials. So, we protect the Lambda with JWT directly.
+* Since we are using Auth0, we needed to open Lambda's Security Group outbound rules to connect to Auth0.  You should use Amazon Cognito instead.
+* There are opportunities to simplify this solution
 
 ## References
 * [Amazon DynamoDB](https://aws.amazon.com/pm/dynamodb/)
 * [Amazon Lambda](https://aws.amazon.com/lambda/)
 * [Amazon Elastic Load Balancer](https://aws.amazon.com/elasticloadbalancing/)
 * [Amazon S3](https://aws.amazon.com/s3/)
+* [Amazon Certificate Manager](https://aws.amazon.com/certificate-manager/)
+* [Auth0](https://auth0.com)

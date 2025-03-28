@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { BatchGetCommand, BatchGetCommandInput, DynamoDBDocumentClient, GetCommand, GetCommandInput } from "@aws-sdk/lib-dynamodb";
+import { JwtVerifier } from "aws-jwt-verify";
 import { Handler } from "aws-lambda";
 
 const clientDynamo = new DynamoDBClient({region: process.env.REGION});
@@ -18,14 +19,35 @@ const serverError = {
   body: JSON.stringify({ message: 'Kernel Panic!' }),
 };
 
-export const handler: Handler = async (event, context) => {    
+const jwtVerifier = JwtVerifier.create({
+   issuer: process.env.ISSUER || '',
+   jwksUri: process.env.JWKSURI,
+   audience: process.env.AUDIENCE
+});
+
+export const handler: Handler = async (event, context) => {
+
+  try {
+    const authHeader = event.headers?.Authorization || event.headers?.authorization;
+
+    if (!authHeader) {
+      return errorMessage(401, 'Missing Authorization header');
+    } 
+   
+    await jwtVerifier.verify(authHeader.split(' ')[1], {
+      audience: process.env.AUDIENCE || ''
+    });
+  } catch {
+    return errorMessage(401, 'Invalid token');
+  }
+
   switch (`${event.httpMethod} ${event.path}`) {
     case 'POST /book':
       return getBook(JSON.parse(Buffer.from(event.body, 'base64').toString('utf-8')));
     case 'POST /books':
       return getBooks(JSON.parse(Buffer.from(event.body, 'base64').toString('utf-8')));
     default:
-      return notFound;
+      return notFound;  
   }
 };
 
@@ -87,4 +109,11 @@ const getBook = async (payload: any) => {
   } else {
     return missing;
   }
+};
+
+const errorMessage = (code: Number, message: string) => {
+  return {
+    statusCode: code,
+    body: JSON.stringify({ message: message }),
+  };
 };
