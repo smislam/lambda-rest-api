@@ -56,9 +56,12 @@ export class LambdaRestApiStack extends cdk.Stack {
       logRetention: RetentionDays.ONE_DAY,
       tracing: Tracing.ACTIVE
     });
+
     table.grantWriteData(dataLoader);
     bucket.grantRead(dataLoader);    
     dataLoader.addEventSource(bucketEventSource);
+    deploy.node.addDependency(dataLoader);
+        
     const issuer = StringParameter.valueForTypedStringParameterV2(this, 'auth-issuer');
     const audience = StringParameter.valueForTypedStringParameterV2(this, 'auth-audience');
     const jwksUri = StringParameter.valueForTypedStringParameterV2(this, 'auth-jwksUri');
