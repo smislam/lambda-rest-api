@@ -1,12 +1,14 @@
-# AWS Lambda based REST API
-In this example, we create a Lambda based REST API.  We then expose the APIs using AWS Application Load Balancer.
+# AWS Lambda based REST API with OAuth
+In this example, we create a Lambda based REST API.  We then expose the APIs using AWS Application Load Balancer. 
 
-This application takes advantage of `Serverless` and `Event-driven` architectures.  It allows automated loading of user data from S3 to AWS DynamoDB database.  It then makes the REST APIs available using a Lambda.  This solution also enables `Batch processing` of data loads and data retrievals to optimize performance.
+This application takes advantage of `Serverless`, `Event-driven`, `Secure` architectures.  It allows automated loading of data from S3 to AWS DynamoDB database.  It then creates the `REST APIs` and make those available using a Lambda.  This solution also enables `Batch processing` of data loads and data retrievals to optimize performance.  
+
+This application also secures the API with `OAuth 2.0 Client Credentials Grant for machine-to-machine` workflows. This example uses Auth0.  It also enables `Encryption-In-Transit` by using SSL certificate.
 
 This application is developed using AWS CDK in TypeScript.
 
 ## Architecture
-![image](lambda-rest-api.jpg "Lambda REST API Architecture")
+![image](lambda-rest-api.jpg "Lambda based REST API Architecture")
 
 ## What does it build?
 * Creates a S3 bucket for user Data
@@ -23,7 +25,6 @@ This application is developed using AWS CDK in TypeScript.
 * Configure your Identity Provider.  We used Auth0.
 * Once the Identity provider is created, add the infromation to SSM and Secrets Manager (Client-Secret), so that we can configure the REST API Lambda to validate JWT.
 * Deploy the CDK code. Wait for the deployment to finish.  It will print out the API endpoint for you to use.  For demonstration purpose, we also share a data file that will be uploaded to S3.
-* Update your IDP configurations callback configurations to use the API endpoints you have.
 * Get the Access token from your Identity Provider
   * ![image](get-access-token.PNG "Example of fetching access token from Auth0")
 * Invoke the REST APIs using the Access token
