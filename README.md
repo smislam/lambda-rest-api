@@ -34,8 +34,8 @@ This application is developed using AWS CDK in TypeScript.
 ## Considerations
 * We are using Self-signed Certificate.  Please use a Certificate Provider like Amazon Certificate Manager.
 * AWS ALB doesn't support client_credentials. So, we protect the Lambda with JWT directly.
-* Since we are using Auth0, we needed to open Lambda's Security Group outbound rules to connect to Auth0.  Identify the requirements for the IDP you are using.
-* You can use Amazon Cognito instead of external IDP
+* If you are behind a private network, remember to open the Lambda's Security Group outbound rules to connect to your IDP for validating the token.
+* Prefer the use of Amazon Cognito instead of external IDP
 * There are opportunities to simplify this solution
 
 ## References

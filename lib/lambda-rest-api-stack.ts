@@ -106,7 +106,7 @@ export class LambdaRestApiStack extends cdk.Stack {
       }
     });
 
-    // if you are behind a private network, add outbound rule for Lambda so that it can connect to Auth0 to validate token.
+    // If you are behind a private network, add outbound rule for Lambda so that it can connect to Auth0 to validate token.
     // Use these IPs: https://auth0.com/docs/secure/security-guidance/data-security/allowlist
 
     new cdk.CfnOutput(this, 'alb-url', {
