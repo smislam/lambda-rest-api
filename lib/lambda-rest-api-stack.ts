@@ -5,11 +5,13 @@ import { Peer, Port, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { ApplicationLoadBalancer, ApplicationProtocol, SslPolicy } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { LambdaTarget } from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
-import { S3EventSourceV2 } from 'aws-cdk-lib/aws-lambda-event-sources';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketEncryption, EventType } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
+import { SqsDestination } from 'aws-cdk-lib/aws-s3-notifications';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import path = require('path');
@@ -29,8 +31,6 @@ export class LambdaRestApiStack extends cdk.Stack {
       encryption: BucketEncryption.S3_MANAGED
     });
 
-    const bucketEventSource = new S3EventSourceV2(bucket, { events: [EventType.OBJECT_CREATED]});
-
     const appPath = path.resolve(path.join(__dirname, '../data'));
     const deploy = new BucketDeployment(this, 'source-app', {
       destinationBucket: bucket,
@@ -48,18 +48,37 @@ export class LambdaRestApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY
     });
 
+    const deadLetterQueue = new Queue(this, 'dlq', {
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const fileQueue = new Queue(this, 'file-queue', {
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      deadLetterQueue: {
+        maxReceiveCount: 2,
+        queue: deadLetterQueue
+      }
+    });
+
+    bucket.addEventNotification(EventType.OBJECT_CREATED, new SqsDestination(fileQueue));
+
     const dataLoader = new NodejsFunction(this, 'data-loader', {
       vpc,
       handler: 'handler',
       runtime: Runtime.NODEJS_LATEST,
       entry: path.join(__dirname, '/../lambda/data_loader.ts'),   
       logRetention: RetentionDays.ONE_DAY,
-      tracing: Tracing.ACTIVE
+      tracing: Tracing.ACTIVE,
+      deadLetterQueue,
     });
 
     table.grantWriteData(dataLoader);
-    bucket.grantRead(dataLoader);    
-    dataLoader.addEventSource(bucketEventSource);
+    bucket.grantRead(dataLoader);
+
+    const sqsEventSource = new SqsEventSource(fileQueue);    
+    dataLoader.addEventSource(sqsEventSource);
     deploy.node.addDependency(dataLoader);
         
     const issuer = StringParameter.valueForTypedStringParameterV2(this, 'auth-issuer');

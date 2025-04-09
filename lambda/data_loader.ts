@@ -1,31 +1,44 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { GetObjectCommand, GetObjectRequest, S3Client } from "@aws-sdk/client-s3";
 import { BatchWriteCommand, BatchWriteCommandInput, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { Context, Handler, S3Event } from "aws-lambda";
+import { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { Readable } from "stream";
 
 const clientS3 = new S3Client({region: process.env.REGION});
 const clientDynamo = new DynamoDBClient({region: process.env.REGION});
 const clientDoc = DynamoDBDocumentClient.from(clientDynamo);
 
-export const handler: Handler = async (event: S3Event, context: Context) => {
+export const handler: SQSHandler = async (event: SQSEvent, context: Context) => {
     try {
-        const input: GetObjectRequest = {
-            Bucket: event.Records[0].s3.bucket.name,
-            Key: event.Records[0].s3.object.key,
-        }
+        const records: SQSRecord[] = event.Records;
+        for (const record of records) {
+            const sqsElements = JSON.parse(record.body);
 
-        const response = await clientS3.send(new GetObjectCommand(input));
+            for (const element of sqsElements.Records) {
+                const input: GetObjectRequest = {
+                    Bucket: element.s3.bucket.name,
+                    Key: element.s3.object.key,
+                }
 
-        if (response.Body instanceof Readable) {
-            const items = await getData(response.Body);
-            await writeToDb(JSON.parse(items));
-        } else {
-            console.error('File cannot be read');
+                const response = await clientS3.send(new GetObjectCommand(input));
+
+                try {
+                    if (response.Body instanceof Readable) {
+                        const items = await getData(response.Body);
+                        await writeToDb(JSON.parse(items));
+                    } else {
+                        console.error('File is not readable', JSON.stringify(input));                        
+                    }
+                } catch (error) {
+                    console.error('File parsing error: ', JSON.stringify(input), error);
+                    throw error;
+                }
+            }
         }
 
     } catch (error) {
         console.error(error);
+        throw error;
     }
 
     interface Bulk {
@@ -55,7 +68,8 @@ export const handler: Handler = async (event: S3Event, context: Context) => {
         try {
             await clientDoc.send(new BatchWriteCommand(batchInput));
         } catch (error) {
-            console.error(`Error Loding data: ${error}`);
+            console.error('Error Loding data to Table: ', error);
+            throw error;
         }
     }
 }; 
