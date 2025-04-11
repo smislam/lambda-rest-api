@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { AttributeType, TableClass, TableV2 } from 'aws-cdk-lib/aws-dynamodb';
-import { Peer, Port, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { GatewayVpcEndpointAwsService, InterfaceVpcEndpointAwsService, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { ApplicationLoadBalancer, ApplicationProtocol, SslPolicy } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { LambdaTarget } from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
@@ -23,7 +23,25 @@ export class LambdaRestApiStack extends cdk.Stack {
     const tableName = "books";
     const tablePK = "isbn";
 
-    const vpc = new Vpc(this, 'app-vpc', {});
+    const vpc = new Vpc(this, 'app-vpc', {
+      gatewayEndpoints: {
+        s3: {service: GatewayVpcEndpointAwsService.S3},
+        dynamoDb: {service: GatewayVpcEndpointAwsService.DYNAMODB}
+      }
+    });
+
+    [
+      InterfaceVpcEndpointAwsService.CLOUDTRAIL,
+      InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+      InterfaceVpcEndpointAwsService.LAMBDA,
+      InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+      InterfaceVpcEndpointAwsService.SQS
+    ].forEach(vpce => vpc.addInterfaceEndpoint(
+      vpce.shortName, {
+        service: vpce,
+        privateDnsEnabled: true
+      }
+    ));
 
     const bucket = new Bucket(this,'data-bucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
